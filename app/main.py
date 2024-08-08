@@ -3,6 +3,7 @@ from dataclasses import asdict
 import uvicorn
 from fastapi import FastAPI, Depends
 from fastapi.security import APIKeyHeader
+from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.middleware.cors import CORSMiddleware
 
 from app.common.consts import EXCEPT_PATH_LIST, EXCEPT_PATH_REGEX
@@ -10,7 +11,7 @@ from app.database import schema
 from app.database.conn import db
 
 from app.common.config import conf_setting
-from app.middlewares.token_validation import AccessControlMiddleware
+from app.middlewares.token_validation import access_control_middleware
 from app.middlewares.trusted_hosts import TrustedHostsMiddleware
 from app.routers import index, auth, user
 
@@ -37,7 +38,7 @@ def create_app():
     # 미들웨어
     # 미들웨어의 경우 stack이기 때문에 가장 나중에 add 된 middleware부터 실행됨
     # 3. User Access Token 검사
-    app.add_middleware(AccessControlMiddleware, except_path_list=EXCEPT_PATH_LIST, except_path_regx=EXCEPT_PATH_REGEX)
+    app.add_middleware(middleware_class=BaseHTTPMiddleware, dispatch=access_control_middleware)
     # 2. CORS 검사
     app.add_middleware(
         CORSMiddleware,
