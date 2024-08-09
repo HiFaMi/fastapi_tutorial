@@ -10,78 +10,76 @@ from starlette.requests import Request
 from starlette.responses import JSONResponse
 from starlette.types import ASGIApp, Scope, Receive, Send
 
-from app.common.consts import JWT_SECRET, JWT_ALGORITHM
+from app.common.consts import JWT_SECRET, JWT_ALGORITHM, EXCEPT_PATH_REGEX, EXCEPT_PATH_LIST
 from app.errors import exceptions as ex
 from app.models import UserToken
+from utils.logger import api_logger
 
 
-class AccessControlMiddleware:
+async def access_control_middleware(request: Request, next_call):
+    headers = request.headers
+    ip_from = headers.get("x-forwarded-for", request.client.host)
 
-    def __init__(self, app: ASGIApp, except_path_list: typing.Sequence[str] = None, except_path_regx: str = None) -> None:
-        if except_path_list is None:
-            except_path_list = ["*"]
+    ip = ip_from.split(",")[0]
+    # request.state: custom additional information
+    now = datetime.now()
+    request.state.ip = ip
+    request.state.req_time = now
+    request.state.start = time.time()
+    request.state.inspect = None
+    request.state.user = None
+    request.state.is_admin_access = None
 
-        self.app = app
-        self.except_path_list = except_path_list
-        self.except_path_regx = except_path_regx
+    url = request.url.path
+    if await url_pattern_check(url, EXCEPT_PATH_REGEX) or url in EXCEPT_PATH_LIST:
+        response = await next_call(request)
 
-    # Middleware 호출시 동작
-    async def __call__(self, scope: Scope, receive: Receive, send: Send):
+        if url == "/":
+            await api_logger(request, response)
 
-        request = Request(scope=scope)
-        headers = Headers(scope=scope)
+        return response
 
-        ip_from = headers.get("x-forwarded-for", None)
+    try:
+        if request.url.path.startswith("/api"):
+            access_token = headers.get("Authorization", None)
+        else:
+            # template render
+            cookies = request.cookies
+            access_token = cookies.get("Authorization", None)
 
-        if await self.url_pattern_check(request.url.path, self.except_path_regx) or request.url.path in self.except_path_list:
-            return await self.app(scope, receive, send)
+        if not access_token:
+            raise ex.NotAuthorizedEx()
 
-        try:
-            # request.state: custom additional information
-            now = datetime.now()
-            request.state.req_time = now
-            request.state.start = time.time()
-            request.state.inspect = None
-            request.state.user = None
-            request.state.is_admin_access = None
+        token_info = await token_decode(access_token)
+        request.state.user = UserToken(**token_info)
 
-            if request.url.path.startswith("/api"):
-                access_token = headers.get("Authorization", None)
-            else:
-                # template render
-                cookies = request.cookies
-                access_token = cookies.get("Authorization", None)
-
-            if not access_token:
-                raise ex.NotAuthorizedEx
-
-            token_info = await self.token_decode(access_token)
-            request.state.user = UserToken(**token_info)
-
-            res = await self.app(scope, receive, send)
-        except ex.APIException as e:
-            res = await self.exception_handler(e)
-            res = await res(scope, receive, send)
-        return res
-
-    @staticmethod
-    async def url_pattern_check(path, pattern):
-        result = re.match(pattern, path)
-        return bool(result)
-
-    @staticmethod
-    async def token_decode(access_token):
-        try:
-            access_token = access_token.replace("Bearer ", "")
-            payload = jwt.decode(access_token, key=JWT_SECRET, algorithms=[JWT_ALGORITHM])
-        except ExpiredSignatureError as ese:
-            raise ex.TokenExpiredEx(ese)
-        except PyJWTError as jwt_error:
-            raise ex.TokenDecodeEx(jwt_error)
-        return payload
-
-    @staticmethod
-    async def exception_handler(error: ex.APIException) -> JSONResponse:
+        response = await next_call(request)
+        await api_logger(request, response=response)
+    except Exception as e:
+        error = await exception_handler(e)
         error_dict = dict(status_code=error.status_code, code=error.code, msg=error.msg, detail=error.detail)
-        res = JSONResponse(status_code=error.status_code, content=error_dict)
-        return res
+        response = JSONResponse(error_dict, status_code=error.status_code)
+        await api_logger(request, error=error)
+    return response
+
+
+async def url_pattern_check(path, pattern):
+    result = re.match(pattern, path)
+    return bool(result)
+
+
+async def token_decode(access_token):
+    try:
+        access_token = access_token.replace("Bearer ", "")
+        payload = jwt.decode(access_token, key=JWT_SECRET, algorithms=[JWT_ALGORITHM])
+    except ExpiredSignatureError as ese:
+        raise ex.TokenExpiredEx(ese)
+    except PyJWTError as jwt_error:
+        raise ex.TokenDecodeEx(jwt_error)
+    return payload
+
+
+async def exception_handler(error: Exception) -> ex.APIException:
+    if not isinstance(error, ex.APIException):
+        error = ex.APIException(ex=error, detail=str(error))
+    return error

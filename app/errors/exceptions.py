@@ -18,6 +18,7 @@ class APIException(Exception):
         self.code = code
         self.msg = msg
         self.detail = detail
+        self.ex = ex
         super().__init__(ex)
 
 
