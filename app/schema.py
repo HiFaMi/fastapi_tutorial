@@ -1,4 +1,4 @@
-# fastapi model은 validation 용도
+# fastapi schema for validation
 from pydantic import EmailStr, BaseModel
 from enum import Enum
 

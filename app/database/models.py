@@ -1,3 +1,5 @@
+# models for DB Table
+
 from sqlalchemy import Column, Integer, DateTime, func, Enum, String, Boolean
 from sqlalchemy.orm import Session
 

@@ -1,8 +1,8 @@
 from fastapi import APIRouter
 from starlette.requests import Request
 
-from app.database.schema import Users
-from app.models import UserMe, UserToken
+from app.database.models import Users
+from app.schema import UserMe
 
 router = APIRouter()
 

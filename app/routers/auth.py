@@ -8,8 +8,8 @@ from starlette.responses import JSONResponse
 
 from app.database.conn import db
 from app.common.consts import JWT_SECRET, JWT_ALGORITHM
-from app.database.schema import Users
-from app.models import SnsType, Token, UserRegister, UserToken
+from app.database.models import Users
+from app.schema import SnsType, Token, UserRegister, UserToken
 
 router = APIRouter()
 

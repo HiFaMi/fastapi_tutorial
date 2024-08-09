@@ -6,7 +6,7 @@ from fastapi.security import APIKeyHeader
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.middleware.cors import CORSMiddleware
 
-from app.database import schema
+from app.database import models
 from app.database.conn import db
 
 from app.common.config import conf_setting
@@ -29,8 +29,8 @@ def create_app():
     # 데이터베이스
     db.init_app(app, **config_setting_dict)
     # Database init 이후 engine 설정되어 있음
-    # Database Schema Table 생성
-    schema.Base.metadata.create_all(bind=db.engine)
+    # Database Model Table 생성
+    models.Base.metadata.create_all(bind=db.engine)
 
     # 레디스
 

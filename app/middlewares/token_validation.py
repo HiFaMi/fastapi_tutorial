@@ -1,18 +1,15 @@
 import re
 import time
-import typing
 from datetime import datetime
 
 import jwt
 from jwt import PyJWTError, ExpiredSignatureError
-from starlette.datastructures import Headers
 from starlette.requests import Request
 from starlette.responses import JSONResponse
-from starlette.types import ASGIApp, Scope, Receive, Send
 
 from app.common.consts import JWT_SECRET, JWT_ALGORITHM, EXCEPT_PATH_REGEX, EXCEPT_PATH_LIST
 from app.errors import exceptions as ex
-from app.models import UserToken
+from app.schema import UserToken
 from utils.logger import api_logger
 
 
