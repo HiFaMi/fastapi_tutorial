@@ -1,3 +1,6 @@
+from app.common.consts import MAX_API_KEY
+
+
 class StatusCode:
     HTTP_500 = 500
     HTTP_400 = 400
@@ -62,5 +65,27 @@ class TokenDecodeEx(APIException):
             code=f"{StatusCode.HTTP_400}{'3'.zfill(4)}",
             msg="비정상적인 접근 입니다.",
             detail=f"Token has been compromised.",
+            ex=ex,
+        )
+
+
+class MaxAPIKeyEx(APIException):
+    def __init__(self, ex: Exception = None):
+        super().__init__(
+            status_code=StatusCode.HTTP_400,
+            code=f"{StatusCode.HTTP_400}{'4'.zfill(4)}",
+            msg=f"API KEY 개수는 최대 {MAX_API_KEY}개 가능합니다.",
+            detail="Max Key Count Reached",
+            ex=ex,
+        )
+
+
+class NoAPIKeyMatchEx(APIException):
+    def __init__(self, ex: Exception = None):
+        super().__init__(
+            status_code=StatusCode.HTTP_400,
+            code=f"{StatusCode.HTTP_400}{'5'.zfill(4)}",
+            msg=f"조건에 맞는 API Key가 없습니다.",
+            detail="No Match API Key",
             ex=ex,
         )

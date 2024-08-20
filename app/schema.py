@@ -1,4 +1,6 @@
 # fastapi schema for validation
+from datetime import datetime
+
 from pydantic import EmailStr, BaseModel
 from enum import Enum
 
@@ -38,3 +40,16 @@ class UserMe(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class AddKeyInfo(BaseModel):
+    memo: str | None = None
+
+    class Config:
+        from_attributes = True
+
+
+class ApiKey(AddKeyInfo):
+    id: int = None
+    secret_key: str | None = None
+    create_time: datetime = None

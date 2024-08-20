@@ -1,7 +1,7 @@
 # models for DB Table
 
-from sqlalchemy import Column, Integer, DateTime, func, Enum, String, Boolean
-from sqlalchemy.orm import Session
+from sqlalchemy import Column, Integer, DateTime, func, Enum, String, Boolean, ForeignKey
+from sqlalchemy.orm import Session, relationship
 
 from app.database.conn import Base, db
 
@@ -62,3 +62,20 @@ class Users(Base, BaseMixin):
     profile_image = Column(String(length=1000), nullable=True)
     sns_type = Column(Enum("FB", "G", "N"), nullable=True, default=None)
     marketing_agree = Column(Boolean, default=False)
+
+
+class ApiKeys(Base, BaseMixin):
+    __tablename__ = "api_keys"
+    access_key = Column(String(length=64), nullable=False, index=True)
+    secret_key = Column(String(length=64), nullable=False)
+    memo = Column(String(length=40), nullable=True)
+    status = Column(Enum("active", "stopped", "deleted"), default="active")
+    is_whitelisted = Column(Boolean, default=False)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    white_list = relationship("ApiWhiteLists", backref="api_keys")
+
+
+class ApiWhiteLists(Base, BaseMixin):
+    __tablename__ = "api_white_lists"
+    ip_address = Column(String(length=64), nullable=False)
+    api_key_id = Column(Integer, ForeignKey("api_keys.id"), nullable=False)

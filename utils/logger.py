@@ -15,7 +15,6 @@ async def api_logger(request: Request, response=None, error=None):
     error_log = None
 
     user = request.state.user
-    body = await request.body()
 
     if error:
         frame = request.state.inspect
@@ -57,9 +56,6 @@ async def api_logger(request: Request, response=None, error=None):
         processed_time=f"{round(process_time * 1000, 5)} ms",
         datetime=f"{datetime.now():%Y-%m-%d %H:%M:%S}",
     )
-
-    if body:
-        log_dict["body"] = body
 
     logger_to_json = json.dumps(log_dict, indent=4)
     if status_code >= 500:
